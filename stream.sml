@@ -50,21 +50,19 @@ end
 
 structure Stream = struct
 	datatype 'element stream =
-		T of ('element * 'element stream) option Promise.promise
-	fun create function = T (Promise.delay function)
+		T of unit -> ('element * 'element stream) option
+	fun create function = T function
 	fun empty () = create (fn () => NONE)
 	fun cons headAndTail = create (fn () => SOME headAndTail)
-	fun unfold harvest seed = T (
-		Promise.delay (fn () =>
-			case harvest seed of
-				NONE => NONE
-				| SOME (fruit, seed) => SOME (
-					fruit
-					, unfold harvest seed
-				)
-		)
+	fun unfold harvest seed = create (fn () =>
+		case harvest seed of
+			NONE => NONE
+			| SOME (fruit, seed) => SOME (
+				fruit
+				, unfold harvest seed
+			)
 	)
-	fun getItem (T promise) = Promise.force promise
+	fun getItem (T function) = function ()
 	fun fromList list = unfold List.getItem list
 	fun toList stream = case getItem stream of
 		NONE => nil
@@ -111,13 +109,8 @@ structure Stream = struct
 		fun toArray stream = withTabulate Array.tabulate stream
 		fun toString stream = withTabulate CharVector.tabulate stream
 	end
-	fun fromTextInstream instream = unfold (fn instream => 
-		case TextIO.input1 instream of
-			NONE => (
-				TextIO.closeIn instream
-				; NONE
-			) | SOME char => SOME (char, instream)
-	) instream
+	fun fromTextInstream instream =
+		unfold TextIO.StreamIO.input1 (TextIO.getInstream instream)
 	fun append (first, second) = create (fn () =>
 		case getItem first of
 			NONE => getItem second
