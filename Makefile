@@ -4,6 +4,7 @@
 	$(MLLEX) $^
 %: %.mlb
 	$(MLTON) $(MLTONFLAGS) -output $@ $^
+count: count.mlb
 all: score tabulate
 score: score.mlb
 tabulate: tabulate.mlb
