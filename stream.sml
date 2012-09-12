@@ -1,10 +1,16 @@
 signature STREAM = sig
 	type 'element stream
-	val create: (unit -> ('element * 'element stream) option) -> 'element stream
+	val create:
+		(unit -> ('element * 'element stream) option)
+		-> 'element stream
 	val empty: unit -> 'element stream
 	val cons: 'element * 'element stream -> 'element stream
-	val unfold: ('seed -> ('fruit * 'seed) option) -> 'seed -> 'fruit stream
+	val unfold:
+		('seed -> ('fruit * 'seed) option)
+		-> 'seed
+		-> 'fruit stream
 	val getItem: 'element stream -> ('element * 'element stream) option
+	val isEmpty: 'element stream -> bool
 	val fold:
 		('element * 'accumulation -> 'accumulation)
 		-> 'accumulation
@@ -13,7 +19,10 @@ signature STREAM = sig
 	val length: 'element stream -> int
 	val rev: 'element stream -> 'element stream
 	val map: ('input -> 'output) -> 'input stream -> 'output stream
-	val mapPartial: ('input -> 'output option) -> 'input stream -> 'output stream
+	val mapPartial:
+		('input -> 'output option)
+		-> 'input stream
+		-> 'output stream
 	val app: ('element -> unit) -> 'element stream -> unit
 	val toList: 'element stream -> 'element list
 	val fromList: 'element list -> 'element stream
@@ -46,6 +55,14 @@ signature STREAM = sig
 		-> 'element stream
 		-> 'element stream * 'element stream
 	val trim: 'element stream * int -> 'element stream
+	val tokens:
+		('element -> bool)
+		-> 'element stream
+		-> 'element stream stream
+	val fields:
+		('element -> bool)
+		-> 'element stream
+		-> 'element stream stream
 end
 
 structure Stream = struct
@@ -202,6 +219,25 @@ structure Stream = struct
 		else create (fn () =>
 			case getItem stream of
 				NONE => NONE
-				| SOME (_, tail) => getItem (trim (tail, count - 1))
+				| SOME (_, tail) =>
+					getItem (trim (tail, count - 1))
 		)
+	fun isEmpty stream = case getItem stream of
+		NONE => true
+		| SOME _ => false
+	fun tokens isSeparator stream = unfold (fn stream =>
+		let
+			val skipped = drop isSeparator stream
+		in
+			if isEmpty skipped then NONE
+			else SOME (split (not o isSeparator) skipped)
+		end
+	)
+	fun fields isSeparator stream = unfold (fn stream =>
+		if isEmpty stream then NONE
+		else SOME (
+			take (not o isSeparator) stream
+			, trim (drop (not o isSeparator) stream, 1)
+		)
+	)
 end
