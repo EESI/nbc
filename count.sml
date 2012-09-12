@@ -1,3 +1,6 @@
+infix |>
+fun argument |> function = function argument
+
 local
 	(*
 	val perWord = ref NONE
@@ -6,6 +9,7 @@ local
 	val order = ref (SOME 15)
 	val sides = ref 2
 	val labeled = ref true
+	val includeThese = ref nil
 	val optionsWithoutHelp = [
 		(* {
 			short = "w", long = ["per-word"]
@@ -33,6 +37,14 @@ local
 			short = "u", long = ["unlabeled"]
 			, desc = GetOpt.NoArg (fn () => labeled := false)
 			, help = "emit counts for every possible nmer, without labels"
+		}, {
+			short = "I", long = ["include"]
+			, desc = GetOpt.ReqArg (
+				fn filename =>
+					includeThese :=
+						filename :: (!includeThese)
+				, "filename"
+			), help = "include only words in this file"
 		}
 	]
 	fun usageString () = GetOpt.usageInfo {
@@ -88,9 +100,10 @@ in
 		) | SOME integer => integer
 	val sides = !sides
 	val labeled = !labeled
+	val includeThese = !includeThese
 end
 
-structure Collection :> sig
+functor Collection (val includeThese: string list) :> sig
 	type collection
 	val empty: collection
 	val add: collection * string -> collection
@@ -101,13 +114,39 @@ end = struct
 		val compare = String.compare
 	)
 	type collection = int ref StringTree.tree
-	val empty = StringTree.empty
-	fun bump (tree, nmer) = case StringTree.find (tree, nmer) of
+	fun linesFromFile filename =
+		filename
+		|> TextIO.openIn
+		|> Stream.fromTextInstream
+		|> Stream.tokens (fn char => char = #"\n")
+		|> Stream.map Stream.toString
+	val includeTheseNmers = Stream.concat (
+		includeThese
+		|> linesFromFile
+		|> Stream.concat
+	)
+	val empty = case includeThese of
+		nil => StringTree.empty
+		| _ => StringTree.fromStream (
+			Stream.map (fn nmer =>
+				(nmer, ref 0)
+			) includeTheseNmers
+		)
+	fun bumpAll (tree, nmer) = case StringTree.find (tree, nmer) of
 		NONE => StringTree.add (tree, nmer, ref 1)
 		| SOME count => (
 			count := !count + 1
 			; tree
 		)
+	fun bumpOnly (tree, nmer) = case StringTree.find (tree, nmer) of
+		NONE => tree
+		| SOME count => (
+			count := !count + 1
+			; tree
+		)
+	val bump = case includeThese of
+		nil => bumpAll
+		| _ => bumpOnly
 	fun add (tree, nmer) =
 		if sides = 2 then bump (
 			bump (tree, nmer)
@@ -119,8 +158,7 @@ end = struct
 		) (StringTree.up tree)
 end
 
-infix |>
-fun argument |> function = function argument
+structure Collection = Collection (val includeThese = includeThese)
 
 fun loadFile {order, collection, filename} =
 	filename
