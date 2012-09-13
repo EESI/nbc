@@ -65,7 +65,7 @@ signature STREAM = sig
 		-> 'element stream stream
 end
 
-structure Stream = struct
+structure Stream :> STREAM = struct
 	datatype 'element stream =
 		T of unit -> ('element * 'element stream) option
 	fun create function = T function
@@ -232,12 +232,12 @@ structure Stream = struct
 			if isEmpty skipped then NONE
 			else SOME (split (not o isSeparator) skipped)
 		end
-	)
+	) stream
 	fun fields isSeparator stream = unfold (fn stream =>
 		if isEmpty stream then NONE
 		else SOME (
 			take (not o isSeparator) stream
 			, trim (drop (not o isSeparator) stream, 1)
 		)
-	)
+	) stream
 end
