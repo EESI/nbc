@@ -120,11 +120,11 @@ end = struct
 		|> Stream.fromTextInstream
 		|> Stream.tokens (fn char => char = #"\n")
 		|> Stream.map Stream.toString
-	val includeTheseNmers = Stream.concat (
+	val includeTheseNmers =
 		includeThese
-		|> linesFromFile
+		|> Stream.fromList
+		|> Stream.map linesFromFile
 		|> Stream.concat
-	)
 	val empty = case includeThese of
 		nil => StringTree.empty
 		| _ => StringTree.fromStream (
