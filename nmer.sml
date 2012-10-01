@@ -20,6 +20,8 @@ signature NMER = sig
 	val maximum: nmer
 	val minimum: nmer
 	val next: nmer -> nmer
+	val hash: nmer -> Word.word
+	val equal: nmer * nmer -> bool
 	val toString: nmer -> string
 	structure Single: NMER_SIDES
 		where type sidesBase = base
@@ -45,6 +47,7 @@ signature NMER_ARGUMENTS = sig
 		val orb: word * word -> word
 		val xorb: word * word -> word
 		val compare: word * word -> order
+		val toLarge: word -> LargeWord.word
 	end
 end
 
@@ -123,6 +126,8 @@ functor Nmer (Arguments: NMER_ARGUMENTS) = struct
 			)
 		)
 	end
+	fun hash nmer = Word.fromLarge (Arguments.Word.toLarge nmer)
+	fun equal (a, b) = Arguments.Word.compare (a, b) = EQUAL
 	structure Undetermined = struct
 		type sidesBase = base
 		type sidesNmer = nmer

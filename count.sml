@@ -98,28 +98,29 @@ signature COLLECTION = sig
 	val empty: unit -> collection
 	val add: collection * nmer -> unit
 	val get: collection * nmer -> int
-	val toStream: collection -> (nmer * int) Stream.stream
+	val app: (nmer * int -> unit) -> collection -> unit
 end
 
 functor Collection (Nmer: NMER)
 :> COLLECTION where type nmer = Nmer.nmer = struct
 	type nmer = Nmer.nmer
-	structure NmerTree = Tree (
-		type key = Nmer.nmer
-		val compare = Nmer.compare
+	structure Table = HashTableFn (
+		type hash_key = nmer
+		val hashVal = Nmer.hash
+		val sameKey = Nmer.equal
 	)
-	type collection = int ref NmerTree.tree ref
-	fun empty () = ref NmerTree.empty
-	fun add (tree, nmer) = case NmerTree.find (!tree, nmer) of
-		NONE => tree := NmerTree.add (!tree, nmer, ref 1)
+	type collection = int ref Table.hash_table
+	exception NotFound
+	fun empty () = Table.mkTable (256 * 1024, NotFound)
+	fun add (table, nmer) = case Table.find table nmer of
+		NONE => Table.insert table (nmer, ref 1)
 		| SOME count => count := !count + 1
-	fun get (ref tree, nmer) = case NmerTree.find (tree, nmer) of
+	fun get (table, nmer) = case Table.find table nmer of
 		NONE => 0
 		| SOME (ref count) => count
-	fun toStream (ref tree) =
-		Stream.map (fn (nmer, ref count) =>
-			(nmer, count)
-		) (NmerTree.up tree)
+	fun app execute table = Table.appi (fn (nmer, ref count) =>
+		execute (nmer, count)
+	) table
 end
 
 datatype result = Success | Failure
@@ -170,8 +171,7 @@ functor Labeled (
 		; put (Int.toString count)
 		; put "\n"
 	)
-	fun output collection =
-		Stream.app single (Collection.toStream collection)
+	fun output collection = Collection.app single collection
 end
 
 functor File (
