@@ -1,7 +1,7 @@
 local
 	fasta-all.mlb
 in
-	signature READ
+	signature FILE
 	signature FASTA
 	functor SingleSidedFasta
 	functor DoubleSidedFasta

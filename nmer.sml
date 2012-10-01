@@ -19,6 +19,7 @@ signature NMER = sig
 	val compare: nmer * nmer -> order
 	val maximum: nmer
 	val minimum: nmer
+	val next: nmer -> nmer
 	val toString: nmer -> string
 	structure Single: NMER_SIDES
 		where type sidesBase = base
@@ -82,6 +83,11 @@ functor Nmer (Arguments: NMER_ARGUMENTS) = struct
 			)
 	in
 		val maximum = maximumOfOrder Arguments.order
+	end
+	local
+		val one = Arguments.Word.fromInt 1
+	in
+		fun next nmer = Arguments.Word.+ (nmer, one)
 	end
 	local
 		fun charFromBase base = case Arguments.Word.toInt base of
