@@ -1,60 +1,89 @@
 signature PARSE_STATE = sig
-	type 'argument state
-	val empty: unit -> 'argument state
-	val build:
-		(char -> Int8.int)
-			* (Int8.int -> TextIO.instream * 'argument -> unit)
-			* 'argument state
-		-> unit
-	val enter: TextIO.instream * 'argument * 'argument state -> unit
+	type ('argument, 'result) state
+	val create: unit -> ('argument, 'result) state
+	type ('argument, 'result) handler =
+		TextIO.instream * 'argument -> 'result
+	datatype whichCharacters = These of char list | Any
+	val build: {
+		state: ('argument, 'result) state
+		, characters:
+			(whichCharacters * ('argument, 'result) handler) list
+		, endOfFile: ('argument, 'result) handler
+	} -> unit
+	val enter:
+		('argument, 'result) state
+			* TextIO.instream
+			* 'argument
+		-> 'result
 end
 
 structure ParseState :> PARSE_STATE = struct
-	type 'argument state = {
+	type ('argument, 'result) handler =
+		TextIO.instream * 'argument -> 'result
+	datatype whichCharacters = These of char list | Any
+	type ('argument, 'result) state = {
 		byCharacter: Int8.int vector ref
-		, byIndex: (TextIO.instream * 'argument -> unit) vector ref
+		, byIndex: ('argument, 'result) handler vector ref
+		, endOfFile: ('argument, 'result) handler option ref
 	}
-	fun empty () = {
+	fun create () = {
 		byCharacter = ref (Vector.fromList nil)
 		, byIndex = ref (Vector.fromList nil)
+		, endOfFile = ref NONE
 	}
-	fun build (charToIndex, indexToFunction, {byCharacter, byIndex}) =
+	fun build {
+		state = {byCharacter, byIndex, endOfFile}
+		, characters
+		, endOfFile = newEndOfFile
+	} =
 		let
-			val maximumIndex = ref 0
+			val characters = vector characters
+			fun equal (one: char) (two: char) =
+				one = two
+			fun shallHandle ((whichToHandle, _), char) =
+				case whichToHandle of
+					Any => true
+					| These charactersToHandle =>
+						List.exists (equal char)
+							charactersToHandle
+			fun charToIndex char =
+				case
+					Vector.findi (fn (_, handler) =>
+						shallHandle (handler, char)
+					) characters
+				of
+					NONE => raise Fail (
+						"ParseState.build: "
+						^ Char.toString char
+						^ " not found"
+					) | SOME (index, _) =>
+						Int8.fromInt index
+			fun handlerToFunction (_, function) = function
+			fun indexToFunction index = handlerToFunction (
+				Vector.sub (characters, index)
+			)
 		in
 			byCharacter := Vector.tabulate (
 				Char.maxOrd + 1
-				, fn ordinal => (
-					let
-						val index = charToIndex (
-							chr ordinal
-						)
-					in
-						if index > !maximumIndex then
-							maximumIndex := index
-						else ()
-						; index
-					end
-				)
-			); byIndex := Vector.tabulate (
-				Int8.toInt (!maximumIndex + 1)
-				, indexToFunction o Int8.fromInt
-			)
+				, charToIndex o chr
+			); byIndex :=
+				Vector.map (fn (_, function) =>
+					function
+				) characters
+			; endOfFile := SOME newEndOfFile
 		end
 	fun enter (
-		instream
-		, argument
-		, {
+		{
 			byCharacter = ref byCharacter
 			, byIndex = ref byIndex
+			, endOfFile = ref endOfFile
 		}
+		, instream
+		, argument
 	) = case TextIO.input1 instream of
-		NONE => ()
-		| SOME char =>
-			Vector.sub (
-				byIndex
-				, Int8.toInt (
-					Vector.sub (byCharacter, ord char)
-				)
-			) (instream, argument)
+		NONE => (valOf endOfFile) (instream, argument)
+		| SOME char => Vector.sub (
+			byIndex
+			, Int8.toInt (Vector.sub (byCharacter, ord char))
+		) (instream, argument)
 end
