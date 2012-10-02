@@ -7,8 +7,9 @@ MLLEX = mllex
 	$(MLLEX) $^
 %: %.mlb
 	$(MLTON) $(MLTONFLAGS) -output $@ $^
+all: count probabilities-by-read
 count: count.mlb
-all: score tabulate
+probabilities-by-read: probabilities-by-read.mlb
 score: score.mlb
 tabulate: tabulate.mlb
 clean:
