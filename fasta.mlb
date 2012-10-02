@@ -1,7 +1,8 @@
 local
-	$(SML_LIB)/basis/basis.mlb
-	stream.mlb
-	history.mlb
+	fasta-all.mlb
 in
-	fasta.sml
+	signature FILE
+	signature FASTA
+	functor SingleSidedFasta
+	functor DoubleSidedFasta
 end

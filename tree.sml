@@ -1,7 +1,7 @@
 functor Tree (Key: sig
 	type key
 	val compare: key * key -> order
-end) (* :> sig
+end) :> sig
 	type key = Key.key
 	type 'datum tree
 	val size: 'datum tree -> int
@@ -19,7 +19,7 @@ end) (* :> sig
 	(*
 	val remove: 'datum tree * key -> 'datum tree
 	*)
-end *) = struct
+end = struct
 	type key = Key.key
 	structure Height = Int8
 	datatype 'datum tree =
