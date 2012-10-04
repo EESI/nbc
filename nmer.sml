@@ -23,6 +23,7 @@ signature NMER = sig
 	val hash: nmer -> Word.word
 	val equal: nmer * nmer -> bool
 	val toString: nmer -> string
+	val fromString: string -> nmer option
 	structure Single: NMER_SIDES
 		where type sidesBase = base
 		where type sidesNmer = nmer
@@ -189,6 +190,25 @@ functor Nmer (Arguments: NMER_ARGUMENTS) = struct
 		fun reverse {reverse = ref reverse, forward = _, count = _} =
 			reverse
 	end
+	fun fromString string =
+		let
+			val side = Single.create ()
+			val char = fn 
+				#"A" => (Single.put (side, a); true)
+				| #"a" => (Single.put (side, a); true)
+				| #"C" => (Single.put (side, c); true)
+				| #"c" => (Single.put (side, c); true)
+				| #"G" => (Single.put (side, g); true)
+				| #"g" => (Single.put (side, g); true)
+				| #"T" => (Single.put (side, t); true)
+				| #"t" => (Single.put (side, t); true)
+				| _ => false
+				
+		in
+			if CharVector.all char string then
+				SOME (Single.forward side)
+			else NONE
+		end
 end
 
 functor Test () = struct
@@ -523,6 +543,13 @@ functor Test () = struct
 					)
 				end
 			, expectedResult = "GT"
+		}, {
+			description = "TG fromString"
+			, function = fn () =>
+				case Nmer2.fromString "TG" of
+					NONE => "invalid string"
+					| SOME nmer => Nmer2.toString nmer
+			, expectedResult = "TG"
 		}
 	]
 end

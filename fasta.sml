@@ -1,9 +1,10 @@
 signature FILE = sig
+	type argument
 	type file
 	type read
 	type nmer
 	type result
-	val startFile: string -> file
+	val startFile: argument -> file
 	val startRead: file * string -> read
 	val nmer: file * read * nmer -> unit
 	val stopRead: file * read -> unit
@@ -12,8 +13,9 @@ signature FILE = sig
 end
 
 signature FASTA = sig
+	type argument
 	type result
-	val process: string * TextIO.instream -> result
+	val process: argument * TextIO.instream -> result
 end
 
 functor AgnosticFasta (
@@ -30,7 +32,11 @@ functor AgnosticFasta (
 		sharing type Nmer.nmer = Sides.sidesNmer
 		sharing type File.read = Sides.read
 		sharing type File.file = Sides.file
-) :> FASTA where type result = File.result = struct
+) :> FASTA
+	where type argument = File.argument
+	where type result = File.result
+= struct
+	type argument = File.argument
 	type result = File.result
 
 	val beforeHeaderBeginningOfLine = ParseState.create ()
@@ -171,10 +177,10 @@ functor AgnosticFasta (
 			], endOfFile = success
 		}
 	end
-	fun process (name, instream) = ParseState.enter (
+	fun process (argument, instream) = ParseState.enter (
 		beforeHeaderBeginningOfLine
 		, instream
-		, (File.startFile name, Sides.create ())
+		, (File.startFile argument, Sides.create ())
 	)
 end
 
@@ -213,11 +219,12 @@ functor DoubleSidedFasta (
 )
 
 functor TestFile (Nmer: NMER) = struct
+	type argument = unit
 	type nmer = Nmer.nmer
 	type read = {header: string, nmers: nmer list ref}
 	type file = {header: string, nmers: string list} list ref
 	type result = string
-	fun startFile _ = ref nil
+	fun startFile () = ref nil
 	fun stopFile file = String.concatWith ";" (
 		map (fn {header, nmers} =>
 			header
@@ -247,7 +254,7 @@ functor Test () = struct
 		structure Nmer = Nmer1
 		structure File = File1
 	)
-	fun test process input () = process ("", TextIO.openString input)
+	fun test process input () = process ((), TextIO.openString input)
 	val single1 = test SingleFasta1.process
 	structure Nmer2 = Nmer (
 		val order = 2

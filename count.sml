@@ -181,7 +181,9 @@ functor File (
 ) :> FILE
 	where type nmer = Collection.nmer
 	where type result = result
+	where type argument = unit
 = struct
+	type argument = unit
 	type file = Collection.collection
 	type read = unit
 	type nmer = Collection.nmer
@@ -268,7 +270,7 @@ val () =
 		fun one name =
 			let
 				val instream = TextIO.openIn name
-				val result = process (name, instream)
+				val result = process ((), instream)
 			in
 				TextIO.closeIn instream
 				; case result of

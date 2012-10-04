@@ -13,4 +13,4 @@ probabilities-by-read: probabilities-by-read.mlb
 score: score.mlb
 tabulate: tabulate.mlb
 clean:
-	rm -f count tabulate score
+	rm -f count probabilities-by-read
