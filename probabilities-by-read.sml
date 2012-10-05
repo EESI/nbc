@@ -176,7 +176,11 @@ val table =
 		fun chopEnd string = String.extract (
 			string
 			, 0
-			, SOME (size string - 1)
+			, SOME (size string - (
+				if String.isSuffix "\r\n" string
+				then 2
+				else 1
+			))
 		)
 		val line = Option.map chopEnd o TextIO.inputLine
 		val lines = build line
