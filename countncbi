@@ -1,2 +1,2 @@
 #! /bin/sh
-for d in `ls $1/`; do ./count -w $1/$d/$2perword.gz -t $1/$d/$2total -r $2 $1/$d/*.fna; done
+for d in `ls $1/`; do count -w $1/$d/$2perword.gz -t $1/$d/$2total -r $2 $1/$d/*.fna; done
